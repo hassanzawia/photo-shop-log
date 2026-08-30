@@ -1,0 +1,50 @@
+<!-- زر تغيير كلمة المرور في الشريط العلوي -->
+<button id="btnOpenChangePass" onclick="openChangePasswordModal()" style="background: transparent; border: 1px solid #cbd5e1; color: #334155; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;">
+  <span>🔑</span> تغيير كلمة المرور
+</button>
+
+<!-- نافذة (Modal) تغيير كلمة المرور -->
+<div id="changePasswordModal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 9999; justify-content: center; align-items: center; direction: rtl; font-family: inherit;">
+  <div style="background: #ffffff; width: 100%; max-width: 380px; padding: 24px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px;">
+      <h3 style="margin: 0; font-size: 16px; color: #0f172a;">تغيير كلمة المرور</h3>
+      <button onclick="closeChangePasswordModal()" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #94a3b8;">&times;</button>
+    </div>
+
+    <form id="changePasswordForm" onsubmit="handlePasswordChange(event)">
+      <!-- المستخدم الحالي -->
+      <div style="margin-bottom: 12px;">
+        <label style="font-size: 12px; color: #64748b; display: block; margin-bottom: 4px;">الحساب الحالي:</label>
+        <div id="displayCurrentUsername" style="font-weight: bold; color: #1e293b; background: #f8fafc; padding: 8px; border-radius: 6px; font-size: 13px;">-</div>
+      </div>
+
+      <!-- كلمة المرور الحالية -->
+      <div style="margin-bottom: 12px;">
+        <label style="font-size: 12px; color: #64748b; display: block; margin-bottom: 4px;">كلمة المرور الحالية</label>
+        <input type="password" id="oldPassInput" required placeholder="أدخل كلمة المرور الحالية" style="width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
+      </div>
+
+      <!-- كلمة المرور الجديدة -->
+      <div style="margin-bottom: 12px;">
+        <label style="font-size: 12px; color: #64748b; display: block; margin-bottom: 4px;">كلمة المرور الجديدة</label>
+        <input type="password" id="newPassInput" required minlength="4" placeholder="أدخل 4 أرقام أو حروف على الأقل" style="width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
+      </div>
+
+      <!-- تأكيد كلمة المرور الجديدة -->
+      <div style="margin-bottom: 18px;">
+        <label style="font-size: 12px; color: #64748b; display: block; margin-bottom: 4px;">تأكيد كلمة المرور الجديدة</label>
+        <input type="password" id="confirmPassInput" required placeholder="أعد إدخال كلمة المرور" style="width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;" />
+      </div>
+
+      <div id="changePassMessage" style="font-size: 12px; margin-bottom: 12px; display: none;"></div>
+
+      <!-- أزرار الإجراء -->
+      <div style="display: flex; gap: 8px;">
+        <button type="submit" style="flex: 1; background: #2563eb; color: #ffffff; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer;">حفظ التعديل</button>
+        <button type="button" onclick="closeChangePasswordModal()" style="flex: 1; background: #f1f5f9; color: #475569; border: none; padding: 10px; border-radius: 6px; cursor: pointer;">إلغاء</button>
+      </div>
+    </form>
+
+  </div>
+</div>
