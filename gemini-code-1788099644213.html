@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>سجل التصوير والطباعة اليومي | Photo Shop Log</title>
+
+  <!-- Export Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --success: #16a34a;
+      --danger: #dc2626;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 20px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Login Screen View */
+    #loginScreen {
+      position: fixed;
+      inset: 0;
+      background: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      padding: 20px;
+    }
+
+    .login-card {
+      background: #ffffff;
+      width: 100%;
+      max-width: 400px;
+      padding: 30px;
+      border-radius: 14px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+
+    .login-card h2 {
+      color: var(--primary);
+      margin-bottom: 6px;
+      font-size: 1.4rem;
+    }
+
+    .login-card p {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+    }
+
+    /* Main Dashboard Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+      padding: 16px 20px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .header-info h1 {
+      font-size: 1.25rem;
+      color: var(--primary);
+    }
+
+    .header-info p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    select, input, button {
+      font-size: 0.9rem;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      outline: none;
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .btn-primary { background: var(--primary); color: #fff; border: none; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-excel { background: #107c41; color: #fff; border: none; }
+    .btn-pdf { background: #d83b01; color: #fff; border: none; }
+    .btn-logout { background: #fee2e2; color: var(--danger); border: none; }
+    .btn-admin-manage { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+
+    /* Summary Grid */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      padding: 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .card-title {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .card-value {
+      font-size: 1.4rem;
+      font-weight: bold;
+    }
+
+    .form-layout {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .form-group label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .table-container {
+      overflow-x: auto;
+      background: var(--card-bg);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: right;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: #f1f5f9;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 11000;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 1. LOGIN GATE SCREEN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <h2>سجل التصوير اليومي</h2>
+    <p>bizhub 446e · bizhub 428 COLOUR</p>
+
+    <form onsubmit="handleLogin(event)" style="display:flex; flex-direction:column; gap:14px; text-align:right;">
+      <div>
+        <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:4px;">اختر الحساب</label>
+        <select id="loginUserSelect" style="width:100%;">
+          <option value="admin">المدير العام (Admin)</option>
+          <option value="morning_staff">موظف الصباح (User 1)</option>
+          <option value="evening_staff">موظف المساء (User 2)</option>
+          <option value="night_staff">موظف الفترة الإضافية (User 3)</option>
+        </select>
+      </div>
+
+      <div>
+        <label style="font-size:0.8rem; color:var(--text-muted); display:block; margin-bottom:4px;">كلمة المرور / PIN</label>
+        <input type="password" id="loginPasswordInput" placeholder="أدخل الرمز السري" required style="width:100%; text-align:center; letter-spacing:3px; font-size:1.1rem;" />
+      </div>
+
+      <div id="loginFeedback" style="font-size:0.8rem; color:var(--danger); display:none; text-align:center;"></div>
+
+      <button type="submit" class="btn-primary" style="padding:10px; font-size:1rem; margin-top:6px;">دخول المنصة</button>
+    </form>
+  </div>
+</div>
+
+<!-- 2. MAIN APPLICATION DASHBOARD -->
+<div class="container" id="mainDashboard" style="display:none;">
+  <header>
+    <div class="header-info">
+      <h1>سجل التصوير والطباعة اليومي</h1>
+      <p>bizhub 446e · bizhub 428 COLOUR</p>
+    </div>
+    <div class="user-badge">
+      <span style="font-size:0.9rem; font-weight:bold; color:var(--primary);" id="activeUserDisplay">-</span>
+      <button onclick="openChangePasswordModal()" style="font-size:0.8rem;">🔑 كلمة المرور</button>
+      <button id="btnAdminPanel" onclick="openAdminUserMgmtModal()" class="btn-admin-manage" style="font-size:0.8rem; display:none;">👥 إدارة المستخدمين</button>
+      <button onclick="handleLogout()" class="btn-logout" style="font-size:0.8rem;">خروج 🚪</button>
+    </div>
+  </header>
+
+  <!-- Metrics -->
+  <div class="summary-grid">
+    <div class="card">
+      <div class="card-title">إجمالي الإيراد</div>
+      <div class="card-value" id="valRevenue" style="color: var(--primary);">0.000 د.ل</div>
+    </div>
+    <div class="card">
+      <div class="card-title">المصروفات</div>
+      <div class="card-value" id="valExpense" style="color: var(--danger);">0.000 د.ل</div>
+    </div>
+    <div class="card">
+      <div class="card-title">صافي اليوم</div>
+      <div class="card-value" id="valNet" style="color: var(--success);">0.000 د.ل</div>
+    </div>
+    <div class="card">
+      <div class="card-title">عدد العمليات</div>
+      <div class="card-value" id="valCount">0</div>
+    </div>
+  </div>
+
+  <!-- New Transaction Form -->
+  <div class="card">
+    <h2 style="font-size: 1rem; margin-bottom: 12px;">تسجيل عملية جديدة</h2>
+    <form id="txForm" onsubmit="addTransaction(event)" class="form-layout">
+      <div class="form-group">
+        <label>الخدمة / الماكينة</label>
+        <select id="serviceInput" required>
+          <option value="تصوير مستندات (bizhub 446e)">تصوير مستندات (bizhub 446e)</option>
+          <option value="طباعة ملونة (bizhub 428)">طباعة ملونة (bizhub 428)</option>
+          <option value="تغليف حراري / سلك">تغليف حراري / سلك</option>
+          <option value="سحب سكانر">سحب سكانر</option>
+          <option value="أخرى">خدمات أخرى</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>الكمية</label>
+        <input type="number" id="qtyInput" min="1" value="1" required />
+      </div>
+      <div class="form-group">
+        <label>المبلغ الإجمالي (د.ل)</label>
+        <input type="number" step="0.25" id="totalInput" placeholder="0.000" required />
+      </div>
+      <div class="form-group">
+        <label>مصروف خصم (إن وجد)</label>
+        <input type="number" step="0.25" id="expenseInput" placeholder="0.000" value="0" />
+      </div>
+      <button type="submit" class="btn-primary">إضافة العملية</button>
+    </form>
+  </div>
+
+  <!-- Export Actions -->
+  <div style="display: flex; gap: 10px; justify-content: flex-end;">
+    <button class="btn-excel" onclick="exportToExcel()">📊 تصدير Excel</button>
+    <button class="btn-pdf" onclick="exportToPDF()">📄 تصدير تقرير PDF</button>
+    <button onclick="clearDailyLog()" style="background:#fee2e2; color:#991b1b; border:none;">مسح سجل اليوم</button>
+  </div>
+
+  <!-- Log Table -->
+  <div class="table-container">
+    <table id="transactionsTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>الوقت</th>
+          <th>الوردية</th>
+          <th>الخدمة</th>
+          <th>الكمية</th>
+          <th>الإجمالي (د.ل)</th>
+          <th>المصروف (د.ل)</th>
+          <th>الصافي (د.ل)</th>
+          <th>الموظف</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Self Password Change -->
+<div id="changePasswordModal" class="modal-overlay">
+  <div style="background:#fff; width:100%; max-width:360px; padding:20px; border-radius:10px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+      <h3 style="font-size:1.1rem;">تغيير كلمة المرور الشخصية</h3>
+      <button onclick="closeChangePasswordModal()" style="border:none; background:none; font-size:1.2rem; cursor:pointer;">&times;</button>
+    </div>
+    <form onsubmit="handlePasswordChange(event)" style="display:flex; flex-direction:column; gap:10px;">
+      <div>
+        <label style="font-size:0.8rem; color:var(--text-muted);">كلمة المرور الحالية</label>
+        <input type="password" id="oldPass" required style="width:100%;" />
+      </div>
+      <div>
+        <label style="font-size:0.8rem; color:var(--text-muted);">كلمة المرور الجديدة</label>
+        <input type="password" id="newPass" required minlength="4" style="width:100%;" />
+      </div>
+      <div id="passFeedback" style="font-size:0.8rem; display:none;"></div>
+      <button type="submit" class="btn-primary" style="margin-top:10px;">حفظ</button>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Admin Management of User Passwords -->
+<div id="adminUserMgmtModal" class="modal-overlay">
+  <div style="background:#fff; width:100%; max-width:420px; padding:20px; border-radius:10px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+      <h3 style="font-size:1.1rem; color:#92400e;">لوحة تعيين كلمات مرور الموظفين</h3>
+      <button onclick="closeAdminUserMgmtModal()" style="border:none; background:none; font-size:1.2rem; cursor:pointer;">&times;</button>
+    </div>
+    <form onsubmit="handleAdminPasswordSet(event)" style="display:flex; flex-direction:column; gap:12px;">
+      <div>
+        <label style="font-size:0.8rem; color:var(--text-muted);">اختر الموظف</label>
+        <select id="adminTargetUser" style="width:100%;">
+          <option value="morning_staff">موظف الصباح (User 1)</option>
+          <option value="evening_staff">موظف المساء (User 2)</option>
+          <option value="night_staff">موظف الفترة الإضافية (User 3)</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:0.8rem; color:var(--text-muted);">كلمة المرور الجديدة للموظف</label>
+        <input type="password" id="adminNewUserPass" placeholder="أدخل كلمة المرور الجديدة" required minlength="4" style="width:100%;" />
+      </div>
+      <div id="adminMgmtFeedback" style="font-size:0.8rem; display:none;"></div>
+      <button type="submit" class="btn-primary" style="background:#d97706; margin-top:5px;">تعيين وتحديث كلمة المرور</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Initial Accounts with Admin PIN 1111
+  const DEFAULT_USERS = {
+    admin: { name: "المدير العام (Admin)", pass: "1111", shift: "إدارة عامة" },
+    morning_staff: { name: "موظف الصباح (User 1)", pass: "0000", shift: "صباحية" },
+    evening_staff: { name: "موظف المساء (User 2)", pass: "0000", shift: "مسائية" },
+    night_staff: { name: "موظف الفترة الإضافية (User 3)", pass: "0000", shift: "ليلية / إضافية" }
+  };
+
+  let credentials = JSON.parse(localStorage.getItem('user_credentials')) || DEFAULT_USERS;
+  let loggedInUser = sessionStorage.getItem('active_session_user') || null;
+  let logs = JSON.parse(localStorage.getItem('photo_shop_logs') || '[]');
+
+  // Force sync accounts if schema updated
+  Object.keys(DEFAULT_USERS).forEach(k => {
+    if (!credentials[k]) credentials[k] = DEFAULT_USERS[k];
+  });
+  localStorage.setItem('user_credentials', JSON.stringify(credentials));
+
+  // Handle Login Gate
+  function initView() {
+    const loginScreen = document.getElementById('loginScreen');
+    const mainDashboard = document.getElementById('mainDashboard');
+
+    if (loggedInUser && credentials[loggedInUser]) {
+      loginScreen.style.display = 'none';
+      mainDashboard.style.display = 'flex';
+      document.getElementById('activeUserDisplay').innerText = credentials[loggedInUser].name;
+      
+      // Reveal Admin panel button only for Admin
+      document.getElementById('btnAdminPanel').style.display = (loggedInUser === 'admin') ? 'inline-block' : 'none';
+      render();
+    } else {
+      loginScreen.style.display = 'flex';
+      mainDashboard.style.display = 'none';
+      document.getElementById('loginPasswordInput').value = '';
+    }
+  }
+
+  function handleLogin(e) {
+    e.preventDefault();
+    const userKey = document.getElementById('loginUserSelect').value;
+    const enteredPass = document.getElementById('loginPasswordInput').value.trim();
+    const fb = document.getElementById('loginFeedback');
+
+    if (credentials[userKey] && credentials[userKey].pass === enteredPass) {
+      loggedInUser = userKey;
+      sessionStorage.setItem('active_session_user', userKey);
+      fb.style.display = 'none';
+      initView();
+    } else {
+      fb.innerText = "كلمة المرور غير صحيحة!";
+      fb.style.display = 'block';
+    }
+  }
+
+  function handleLogout() {
+    sessionStorage.removeItem('active_session_user');
+    loggedInUser = null;
+    initView();
+  }
+
+  // Transaction Handler
+  function addTransaction(e) {
+    e.preventDefault();
+    const service = document.getElementById('serviceInput').value;
+    const qty = parseInt(document.getElementById('qtyInput').value, 10);
+    const total = parseFloat(document.getElementById('totalInput').value);
+    const expense = parseFloat(document.getElementById('expenseInput').value) || 0;
+
+    const activeAccount = credentials[loggedInUser];
+
+    const tx = {
+      id: logs.length + 1,
+      time: new Date().toLocaleTimeString('ar-LY', { hour: '2-digit', minute: '2-digit' }),
+      date: new Date().toLocaleDateString('ar-LY'),
+      shift: activeAccount.shift,
+      service: service,
+      qty: qty,
+      total: total,
+      expense: expense,
+      net: total - expense,
+      user: activeAccount.name
+    };
+
+    logs.unshift(tx);
+    localStorage.setItem('photo_shop_logs', JSON.stringify(logs));
+    document.getElementById('txForm').reset();
+    document.getElementById('expenseInput').value = "0";
+    render();
+  }
+
+  function render() {
+    const tbody = document.querySelector('#transactionsTable tbody');
+    tbody.innerHTML = '';
+
+    let rev = 0, exp = 0, net = 0;
+
+    logs.forEach(item => {
+      rev += item.total;
+      exp += item.expense;
+      net += item.net;
+
+      const row = `
+        <tr>
+          <td>${item.id}</td>
+          <td>${item.time}</td>
+          <td>${item.shift}</td>
+          <td>${item.service}</td>
+          <td>${item.qty}</td>
+          <td>${item.total.toFixed(3)}</td>
+          <td>${item.expense.toFixed(3)}</td>
+          <td>${item.net.toFixed(3)}</td>
+          <td>${item.user}</td>
+        </tr>
+      `;
+      tbody.innerHTML += row;
+    });
+
+    document.getElementById('valRevenue').innerText = `${rev.toFixed(3)} د.ل`;
+    document.getElementById('valExpense').innerText = `${exp.toFixed(3)} د.ل`;
+    document.getElementById('valNet').innerText = `${net.toFixed(3)} د.ل`;
+    document.getElementById('valCount').innerText = logs.length;
+  }
+
+  function clearDailyLog() {
+    if (confirm("هل أنت متأكد من مسح سجلات اليوم بالكامل؟")) {
+      logs = [];
+      localStorage.removeItem('photo_shop_logs');
+      render();
+    }
+  }
+
+  // Self Password Change
+  function openChangePasswordModal() {
+    document.getElementById('changePasswordModal').style.display = 'flex';
+    document.getElementById('passFeedback').style.display = 'none';
+    document.getElementById('oldPass').value = '';
+    document.getElementById('newPass').value = '';
+  }
+
+  function closeChangePasswordModal() {
+    document.getElementById('changePasswordModal').style.display = 'none';
+  }
+
+  function handlePasswordChange(e) {
+    e.preventDefault();
+    const oldP = document.getElementById('oldPass').value.trim();
+    const newP = document.getElementById('newPass').value.trim();
+    const fb = document.getElementById('passFeedback');
+
+    if (credentials[loggedInUser].pass !== oldP) {
+      fb.innerText = "كلمة المرور الحالية غير صحيحة!";
+      fb.style.color = "var(--danger)";
+      fb.style.display = "block";
+      return;
+    }
+
+    credentials[loggedInUser].pass = newP;
+    localStorage.setItem('user_credentials', JSON.stringify(credentials));
+    fb.innerText = "تم حفظ التعديل بنجاح!";
+    fb.style.color = "var(--success)";
+    fb.style.display = "block";
+
+    setTimeout(closeChangePasswordModal, 1000);
+  }
+
+  // Admin User Password Management
+  function openAdminUserMgmtModal() {
+    document.getElementById('adminUserMgmtModal').style.display = 'flex';
+    document.getElementById('adminMgmtFeedback').style.display = 'none';
+    document.getElementById('adminNewUserPass').value = '';
+  }
+
+  function closeAdminUserMgmtModal() {
+    document.getElementById('adminUserMgmtModal').style.display = 'none';
+  }
+
+  function handleAdminPasswordSet(e) {
+    e.preventDefault();
+    const target = document.getElementById('adminTargetUser').value;
+    const newPass = document.getElementById('adminNewUserPass').value.trim();
+    const fb = document.getElementById('adminMgmtFeedback');
+
+    credentials[target].pass = newPass;
+    localStorage.setItem('user_credentials', JSON.stringify(credentials));
+
+    fb.innerText = `تم تحديث كلمة المرور لـ (${credentials[target].name}) بنجاح!`;
+    fb.style.color = "var(--success)";
+    fb.style.display = "block";
+
+    setTimeout(closeAdminUserMgmtModal, 1200);
+  }
+
+  // Export Excel
+  function exportToExcel() {
+    if (!logs.length) return alert("لا توجد بيانات مسجلة!");
+    const data = logs.map(x => ({
+      "رقم العملية": x.id,
+      "الوقت": x.time,
+      "الوردية": x.shift,
+      "الخدمة": x.service,
+      "الكمية": x.qty,
+      "الإجمالي (د.ل)": x.total,
+      "المصروف (د.ل)": x.expense,
+      "الصافي (د.ل)": x.net,
+      "الموظف": x.user
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    ws['!views'] = [{ RTL: true }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "سجل العمليات");
+    XLSX.writeFile(wb, `سجل_العمليات_${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+
+  // Export PDF
+  function exportToPDF() {
+    if (!logs.length) return alert("لا توجد بيانات مسجلة!");
+    const container = document.createElement('div');
+    container.style.padding = '20px';
+    container.style.direction = 'rtl';
+    container.innerHTML = `
+      <h2 style="text-align:center; margin-bottom:10px;">تقرير سجل التصوير والطباعة اليومي</h2>
+      <p style="text-align:center; color:#666; font-size:12px; margin-bottom:20px;">bizhub 446e · bizhub 428 COLOUR — ${new Date().toLocaleDateString('ar-LY')}</p>
+      ${document.getElementById('transactionsTable').outerHTML}
+    `;
+    html2pdf().set({
+      margin: 10,
+      filename: `تقرير_الطباعة_${new Date().toISOString().slice(0,10)}.pdf`,
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+    }).from(container).save();
+  }
+
+  // Start app
+  initView();
+</script>
+</body>
+</html>
