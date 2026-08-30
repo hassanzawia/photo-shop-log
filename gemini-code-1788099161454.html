@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>سجل التصوير والطباعة اليومي | Photo Shop Log</title>
+
+  <!-- SheetJS & html2pdf CDN Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --success: #16a34a;
+      --danger: #dc2626;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 20px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+      padding: 16px 20px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .header-info h1 {
+      font-size: 1.25rem;
+      color: var(--primary);
+    }
+
+    .header-info p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .user-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    select, input, button {
+      font-size: 0.9rem;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      outline: none;
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .btn-primary { background: var(--primary); color: #fff; border: none; }
+    .btn-primary:hover { background: var(--primary-dark); }
+
+    .btn-excel { background: #107c41; color: #fff; border: none; }
+    .btn-excel:hover { background: #0b5a2f; }
+
+    .btn-pdf { background: #d83b01; color: #fff; border: none; }
+    .btn-pdf:hover { background: #a82e00; }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      padding: 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .card-title {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .card-value {
+      font-size: 1.4rem;
+      font-weight: bold;
+    }
+
+    .form-layout {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .form-group label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .table-container {
+      overflow-x: auto;
+      background: var(--card-bg);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: right;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: #f1f5f9;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Top Navigation -->
+  <header>
+    <div class="header-info">
+      <h1>سجل التصوير والطباعة اليومي</h1>
+      <p>bizhub 446e · bizhub 428 COLOUR</p>
+    </div>
+    <div class="user-actions">
+      <select id="userSelector" onchange="switchUser(this.value)">
+        <option value="admin">المدير العام (Admin)</option>
+        <option value="morning_staff">موظف الصباح (User 1)</option>
+        <option value="evening_staff">موظف المساء (User 2)</option>
+        <option value="night_staff">موظف الفترة الإضافية (User 3)</option>
+      </select>
+      <button onclick="openChangePasswordModal()">🔑 تغيير كلمة المرور</button>
+    </div>
+  </header>
+
+  <!-- Summary Cards -->
+  <div class="summary-grid">
+    <div class="card">
+      <div class="card-title">إجمالي الإيراد</div>
+      <div class="card-value" id="valRevenue" style="color: var(--primary);">0.000 د.ل</div>
+    </div>
+    <div class="card">
+      <div class="card-title">المصروفات</div>
+      <div class="card-value" id="valExpense" style="color: var(--danger);">0.000 د.ل</div>
+    </div>
+    <div class="card">
+      <div class="card-title">صافي اليوم</div>
+      <div class="card-value" id="valNet" style="color: var(--success);">0.000 د.ل</div>
+    </div>
+    <div class="card">
+      <div class="card-title">عدد العمليات</div>
+      <div class="card-value" id="valCount">0</div>
+    </div>
+  </div>
+
+  <!-- Entry Form -->
+  <div class="card">
+    <h2 style="font-size: 1rem; margin-bottom: 12px;">تسجيل عملية جديدة</h2>
+    <form id="txForm" onsubmit="addTransaction(event)" class="form-layout">
+      <div class="form-group">
+        <label>الخدمة / الماكينة</label>
+        <select id="serviceInput" required>
+          <option value="تصوير مستندات (bizhub 446e)">تصوير مستندات (bizhub 446e)</option>
+          <option value="طباعة ملونة (bizhub 428)">طباعة ملونة (bizhub 428)</option>
+          <option value="تغليف حراري / سلك">تغليف حراري / سلك</option>
+          <option value="سحب سكانر">سحب سكانر</option>
+          <option value="أخرى">خدمات أخرى</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>الكمية</label>
+        <input type="number" id="qtyInput" min="1" value="1" required />
+      </div>
+      <div class="form-group">
+        <label>المبلغ الإجمالي (د.ل)</label>
+        <input type="number" step="0.25" id="totalInput" placeholder="0.000" required />
+      </div>
+      <div class="form-group">
+        <label>مصروف خصم (إن وجد)</label>
+        <input type="number" step="0.25" id="expenseInput" placeholder="0.000" value="0" />
+      </div>
+      <button type="submit" class="btn-primary">إضافة العملية</button>
+    </form>
+  </div>
+
+  <!-- Actions Bar -->
+  <div style="display: flex; gap: 10px; justify-content: flex-end;">
+    <button class="btn-excel" onclick="exportToExcel()">📊 تصدير Excel</button>
+    <button class="btn-pdf" onclick="exportToPDF()">📄 تصدير تقرير PDF</button>
+    <button onclick="clearDailyLog()" style="background:#fee2e2; color:#991b1b; border:none;">مسح سجل اليوم</button>
+  </div>
+
+  <!-- Transactions Table -->
+  <div class="table-container">
+    <table id="transactionsTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>الوقت</th>
+          <th>الوردية</th>
+          <th>الخدمة</th>
+          <th>الكمية</th>
+          <th>الإجمالي (د.ل)</th>
+          <th>المصروف (د.ل)</th>
+          <th>الصافي (د.ل)</th>
+          <th>المستخدم</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Password Change Modal -->
+<div id="changePasswordModal" class="modal-overlay">
+  <div style="background:#fff; width:100%; max-width:360px; padding:20px; border-radius:10px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+      <h3 style="font-size:1.1rem;">تغيير كلمة المرور</h3>
+      <button onclick="closeChangePasswordModal()" style="border:none; background:none; font-size:1.2rem; cursor:pointer;">&times;</button>
+    </div>
+    <form onsubmit="handlePasswordChange(event)" style="display:flex; flex-direction:column; gap:10px;">
+      <div>
+        <label style="font-size:0.8rem; color:var(--text-muted);">المستخدم الحالي</label>
+        <div id="displayCurrentUsername" style="font-weight:bold; font-size:0.9rem; margin-top:2px;"></div>
+      </div>
+      <div>
+        <label style="font-size:0.8rem; color:var(--text-muted);">كلمة المرور الحالية</label>
+        <input type="password" id="oldPass" required style="width:100%;" />
+      </div>
+      <div>
+        <label style="font-size:0.8rem; color:var(--text-muted);">كلمة المرور الجديدة</label>
+        <input type="password" id="newPass" required minlength="4" style="width:100%;" />
+      </div>
+      <div>
+        <label style="font-size:0.8rem; color:var(--text-muted);">تأكيد كلمة المرور الجديدة</label>
+        <input type="password" id="confirmPass" required minlength="4" style="width:100%;" />
+      </div>
+      <div id="passFeedback" style="font-size:0.8rem; display:none;"></div>
+      <button type="submit" class="btn-primary" style="margin-top:10px;">تحديث</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  // --- Setup Admin + 3 Users ---
+  const DEFAULT_USERS = {
+    admin: { 
+      name: "المدير العام (Admin)", 
+      pass: "1234", 
+      shift: "إدارة عامة" 
+    },
+    morning_staff: { 
+      name: "موظف الصباح (User 1)", 
+      pass: "1111", 
+      shift: "صباحية" 
+    },
+    evening_staff: { 
+      name: "موظف المساء (User 2)", 
+      pass: "2222", 
+      shift: "مسائية" 
+    },
+    night_staff: { 
+      name: "موظف الفترة الإضافية (User 3)", 
+      pass: "3333", 
+      shift: "ليلية / إضافية" 
+    }
+  };
+
+  let credentials = JSON.parse(localStorage.getItem('user_credentials')) || DEFAULT_USERS;
+
+  // Merge any missing default accounts safely into localStorage
+  Object.keys(DEFAULT_USERS).forEach(key => {
+    if (!credentials[key]) {
+      credentials[key] = DEFAULT_USERS[key];
+    }
+  });
+  localStorage.setItem('user_credentials', JSON.stringify(credentials));
+
+  let currentUser = localStorage.getItem('active_user') || 'admin';
+  document.getElementById('userSelector').value = currentUser;
+  let logs = JSON.parse(localStorage.getItem('photo_shop_logs') || '[]');
+
+  function switchUser(val) {
+    currentUser = val;
+    localStorage.setItem('active_user', val);
+  }
+
+  // --- Transactions Management ---
+  function addTransaction(e) {
+    e.preventDefault();
+    const service = document.getElementById('serviceInput').value;
+    const qty = parseInt(document.getElementById('qtyInput').value, 10);
+    const total = parseFloat(document.getElementById('totalInput').value);
+    const expense = parseFloat(document.getElementById('expenseInput').value) || 0;
+
+    const activeAccount = credentials[currentUser] || { name: currentUser, shift: "عامة" };
+
+    const tx = {
+      id: logs.length + 1,
+      time: new Date().toLocaleTimeString('ar-LY', { hour: '2-digit', minute: '2-digit' }),
+      date: new Date().toLocaleDateString('ar-LY'),
+      shift: activeAccount.shift,
+      service: service,
+      qty: qty,
+      total: total,
+      expense: expense,
+      net: total - expense,
+      user: activeAccount.name
+    };
+
+    logs.unshift(tx);
+    localStorage.setItem('photo_shop_logs', JSON.stringify(logs));
+    document.getElementById('txForm').reset();
+    document.getElementById('expenseInput').value = "0";
+    render();
+  }
+
+  function render() {
+    const tbody = document.querySelector('#transactionsTable tbody');
+    tbody.innerHTML = '';
+
+    let rev = 0, exp = 0, net = 0;
+
+    logs.forEach(item => {
+      rev += item.total;
+      exp += item.expense;
+      net += item.net;
+
+      const row = `
+        <tr>
+          <td>${item.id}</td>
+          <td>${item.time}</td>
+          <td>${item.shift}</td>
+          <td>${item.service}</td>
+          <td>${item.qty}</td>
+          <td>${item.total.toFixed(3)}</td>
+          <td>${item.expense.toFixed(3)}</td>
+          <td>${item.net.toFixed(3)}</td>
+          <td>${item.user}</td>
+        </tr>
+      `;
+      tbody.innerHTML += row;
+    });
+
+    document.getElementById('valRevenue').innerText = `${rev.toFixed(3)} د.ل`;
+    document.getElementById('valExpense').innerText = `${exp.toFixed(3)} د.ل`;
+    document.getElementById('valNet').innerText = `${net.toFixed(3)} د.ل`;
+    document.getElementById('valCount').innerText = logs.length;
+  }
+
+  function clearDailyLog() {
+    if (confirm("هل أنت متأكد من مسح سجلات اليوم بالكامل؟")) {
+      logs = [];
+      localStorage.removeItem('photo_shop_logs');
+      render();
+    }
+  }
+
+  // --- Password Modal Logic ---
+  function openChangePasswordModal() {
+    const activeAccount = credentials[currentUser] || { name: currentUser };
+    document.getElementById('displayCurrentUsername').innerText = activeAccount.name;
+    document.getElementById('changePasswordModal').style.display = 'flex';
+    document.getElementById('passFeedback').style.display = 'none';
+    document.getElementById('oldPass').value = '';
+    document.getElementById('newPass').value = '';
+    document.getElementById('confirmPass').value = '';
+  }
+
+  function closeChangePasswordModal() {
+    document.getElementById('changePasswordModal').style.display = 'none';
+  }
+
+  function handlePasswordChange(e) {
+    e.preventDefault();
+    const oldP = document.getElementById('oldPass').value.trim();
+    const newP = document.getElementById('newPass').value.trim();
+    const confP = document.getElementById('confirmPass').value.trim();
+    const fb = document.getElementById('passFeedback');
+
+    if (credentials[currentUser].pass !== oldP) {
+      fb.innerText = "كلمة المرور الحالية غير صحيحة!";
+      fb.style.color = "var(--danger)";
+      fb.style.display = "block";
+      return;
+    }
+
+    if (newP !== confP) {
+      fb.innerText = "كلمة المرور الجديدة وتأكيدها غير متطابقين!";
+      fb.style.color = "var(--danger)";
+      fb.style.display = "block";
+      return;
+    }
+
+    credentials[currentUser].pass = newP;
+    localStorage.setItem('user_credentials', JSON.stringify(credentials));
+    fb.innerText = "تم تحديث كلمة المرور بنجاح!";
+    fb.style.color = "var(--success)";
+    fb.style.display = "block";
+
+    setTimeout(() => {
+      closeChangePasswordModal();
+    }, 1000);
+  }
+
+  // --- Excel Export (RTL) ---
+  function exportToExcel() {
+    if (!logs.length) return alert("لا توجد بيانات مسجلة للتصدير!");
+    const data = logs.map(x => ({
+      "رقم العملية": x.id,
+      "الوقت": x.time,
+      "الوردية": x.shift,
+      "الخدمة": x.service,
+      "الكمية": x.qty,
+      "الإجمالي (د.ل)": x.total,
+      "المصروف (د.ل)": x.expense,
+      "الصافي (د.ل)": x.net,
+      "المستخدم": x.user
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    ws['!views'] = [{ RTL: true }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "سجل العمليات");
+    XLSX.writeFile(wb, `سجل_العمليات_${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+
+  // --- PDF Export ---
+  function exportToPDF() {
+    if (!logs.length) return alert("لا توجد بيانات مسجلة للتصدير!");
+    const container = document.createElement('div');
+    container.style.padding = '20px';
+    container.style.direction = 'rtl';
+    container.innerHTML = `
+      <h2 style="text-align:center; margin-bottom:10px;">تقرير سجل التصوير والطباعة اليومي</h2>
+      <p style="text-align:center; color:#666; font-size:12px; margin-bottom:20px;">bizhub 446e · bizhub 428 COLOUR — التاريخ: ${new Date().toLocaleDateString('ar-LY')}</p>
+      ${document.getElementById('transactionsTable').outerHTML}
+    `;
+    html2pdf().set({
+      margin: 10,
+      filename: `تقرير_الطباعة_${new Date().toISOString().slice(0,10)}.pdf`,
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+    }).from(container).save();
+  }
+
+  // Initial render
+  render();
+</script>
+</body>
+</html>
