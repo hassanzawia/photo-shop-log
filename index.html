@@ -613,7 +613,7 @@
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
     }).from(container).save();
   }
-
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
   // Start app
   initView();
 </script>
